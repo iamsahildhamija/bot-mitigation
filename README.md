@@ -10,7 +10,7 @@ This is application-layer bot mitigation, not full volumetric DDoS protection. I
 
 A persistent Bash service follows supported access logs and feeds a long-running AWK detector. When enough independent behavioral signals agree, the module reports a campaign and can apply short, temporary firewall penalties to participating IP addresses on configured web ports.
 
-## Emergency recovery and removal
+## Recovery
 
 Keep these commands available before enabling enforcement:
 
@@ -82,7 +82,7 @@ sudo bash script.sh install --enforce
 
 An observation period is strongly recommended before using that option.
 
-## Enable enforcement
+## Enforcement
 
 ```sh
 sudo bot-mitigation status
@@ -120,7 +120,7 @@ sudo bot-mitigation enforce off
 
 Equivalent mode controls are `dry-run on` and `dry-run off`. The latter explicitly enables enforcement. `emergency-disable` additionally stops the service and leaves an emergency lock. After investigating, clear it into observation mode with `sudo bot-mitigation emergency-enable`; enabling enforcement then requires a separate `sudo bot-mitigation enforce on`. Read the current status after every mode change.
 
-## Service management
+## Service
 
 ```sh
 sudo bot-mitigation start
@@ -178,7 +178,7 @@ The generated configuration is the authoritative list of defaults. It uses one `
 
 Set only documented fields. Configuration validation covers numbers, ranges, window ordering, thresholds, paths, ports, IP/CIDR values, backend selection, and unsupported feature switches. An invalid configuration must be corrected before enforcement can proceed.
 
-### Access logs and multiple websites
+### Multiple Websites
 
 Discovery checks bounded common Nginx, Apache, LiteSpeed/OpenLiteSpeed, cPanel-style domain, and Plesk virtual-host access-log locations at startup; it does not continuously walk the entire filesystem. Unusual layouts should use explicit paths:
 
@@ -194,7 +194,7 @@ Log files must exist and be readable by the service. Ensure rotation creates a n
 
 Even with per-log campaign detection, a firewall ban applies to the source IP across all configured web ports on that machine. A visitor using the same IP on a different domain can be affected. If site-specific penalties are essential, use a site-aware reverse-proxy/WAF integration instead of this firewall backend.
 
-### Reverse proxies and CDNs
+### Reverse Proxies and CDNs
 
 A firewall can block the source address actually arriving at the server. Behind a CDN or load balancer, that address is often the proxy, while an application access log may contain a rewritten client address. Banning the proxy can disrupt all visitors; banning the rewritten client at the origin may have no effect.
 
@@ -210,7 +210,7 @@ The example addresses are documentation ranges; replace them with your actual in
 
 This tool does not infer trust from `X-Forwarded-For`, `X-Real-IP`, or `CF-Connecting-IP`, and it does not modify the web server's real-IP configuration. Standard access logs do not retain enough information to independently prove the relationship between a rewritten client IP and its connection peer. Audit that trust boundary yourself. Use observation mode where the true client cannot be attributed safely. Origin firewall mitigation is generally inappropriate for fully proxied traffic; apply controls at the trusted edge instead.
 
-### Exclusions and allowlists
+### Exclusions
 
 ```ini
 EXCLUDED_PATHS="/.well-known/acme-challenge/ /health /payment-webhook"
@@ -227,7 +227,7 @@ sudo bot-mitigation whitelist remove 198.51.100.10
 
 Allowlists express administrator trust. A claimed `Googlebot` or `Bingbot` User-Agent does not confer trust. Automatic crawler DNS verification is not implemented; use independently verified official address ranges if you need crawler allowlisting and maintain them as providers change.
 
-### Manual temporary blacklists
+### Blacklists
 
 ```sh
 read -r -p "Verified public source IP to block: " SUSPECT_IP
@@ -251,7 +251,7 @@ GEOIP_ASN_DB="/usr/share/GeoIP/GeoLite2-ASN.mmdb"
 
 Lookups are cached and performed outside the per-request parsing hot path. Missing tools, unreadable or malformed databases, and lookup failures degrade to behavioral detection. Country and ASN labels are supporting context only; geography is never proof of malicious traffic. No country-wide or ASN-wide blocking is implemented. `MAXMIND_LICENSE_KEY` is accepted for configuration compatibility, kept out of output, and never used to download databases. Leave it empty: the application does not need this secret.
 
-## Behavior and limits
+## Behavior
 
 The detector maintains bounded rolling state for each log source. It combines distributed participation, unusual aggregate velocity relative to a lightweight baseline, fresh addresses, missing-referrer concentration, shared User-Agents, and concentrated URLs where the parsed format provides those fields. Human-readable events expose the score and contributing signals. No single weak indicator triggers a default automatic penalty.
 
@@ -265,11 +265,11 @@ The default candidate gate additionally requires a sufficiently large cohort sha
 
 Automatic penalties target individual participating source addresses and expire in the kernel. Repeated detections can lengthen penalties up to the configured maximum; stored history is bounded. Firewall rules are scoped to configured HTTP/HTTPS ports. Existing firewall policy still applies, and external firewall-manager reloads can remove application-owned objects; inspect `doctor` after firewall changes.
 
-### HTTP challenge mode
+### HTTP
 
 `ENABLE_CHALLENGE="no"` is mandatory in this release. A generic, safe challenge requires application- or virtual-host-specific integration, signed cookie verification, careful caching, and full rollback of web-server changes. This project does not silently rewrite virtual hosts. Because mitigation observes completed access-log entries, it cannot guarantee suppression of third-party page scripts.
 
-## Statistics and logs
+## Statistics
 
 ```sh
 sudo bot-mitigation stats
@@ -341,7 +341,7 @@ Reinstallation preserves your existing configuration, allowlists, and compatible
 
 `doctor` is read-only. It reports configuration, OS/package manager, service state, logs, parser availability, proxy concerns, and firewall capabilities; its output does not certify the correctness of an upstream proxy configuration.
 
-## Manual recovery if the executable is unavailable
+## Manual Recovery
 
 If you have a reviewed copy of this release's source, first use its normal recovery path even when the installed CLI is missing:
 
@@ -481,7 +481,7 @@ The manual iptables block conservatively stops if unrelated rules were added ins
 
 After stopping the service and removing its firewall objects, the executable and runtime directories may be removed. Preserve `/etc/bot-mitigation/` and `/var/log/bot-mitigation.log` until debugging is complete. Prefer reinstalling the reviewed script and using `uninstall` to get the normal ownership checks and cleanup. Dependencies are not removed by uninstall. After a non-purge uninstall has removed the CLI, remove retained data using your reviewed source copy: `sudo bash script.sh uninstall --purge`.
 
-## Security and contribution guidance
+## Security
 
 This is security-sensitive root software. Review it before deployment, validate in a disposable Linux environment, and maintain a recovery path. The project ships auditable source and repeatable tests; those are not a security audit or a guarantee of production suitability for every topology. A compromised root account, web server, or writable log source can undermine its evidence and controls. Access logs and security events contain IP addresses and request metadata: restrict permissions and set retention appropriate to your deployment.
 
